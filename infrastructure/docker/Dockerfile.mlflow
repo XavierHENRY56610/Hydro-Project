@@ -1,0 +1,15 @@
+# Serveur MLflow — construit sur la même base que l'app (bookworm, repos frais)
+# plutôt que l'image officielle (bullseye, dépôt debian-security expiré).
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install \
+        "mlflow>=2.16,<3" \
+        psycopg2-binary \
+        boto3
+
+EXPOSE 5000

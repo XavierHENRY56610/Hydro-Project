@@ -1,7 +1,7 @@
 """Orchestrateur d'entraînement -- port fidèle de run_one/run_train_meta
 (train_meta.py, Previ_v2) en une fonction pure appelant dans l'ordre les
-briques déjà portées. Pas de plots (SHAP/attention/comparaison), pas de
-MLflow/DVCLive (mlflow_run_id=None) -- portée réduite actée."""
+briques déjà portées. Suivi MLflow (run + métriques + artefacts + registry)
+activé si MLFLOW_TRACKING_URI est défini -- no-op sinon (tests/CI)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from previ_r2d2.common import config
+from previ_r2d2.model.tracking import mlflow_tracking
 from previ_r2d2.model.architectures.bilstm.model import BiLSTMHydro
 from previ_r2d2.model.architectures.bilstm.sequences import build_sequences, get_seq_cols
 from previ_r2d2.model.architectures.lightgbm.features import build_features
@@ -48,8 +49,9 @@ def run_training(
     force_lgbm: bool = False,
     force_lstm: bool = False,
     weights_dir: Path | None = None,
+    register: bool = True,
 ) -> dict:
-    """Orchestre un entraînement complet (une centrale, un horizon) : chargement, OOF, fit final, fit Stacking, évaluation test, artefacts persistés."""
+    """Orchestre un entraînement complet (une centrale, un horizon) : chargement, OOF, fit final, fit Stacking, évaluation test, artefacts persistés. Loggue tout dans MLflow si activé (`register=False` : run + métriques mais pas d'enregistrement au Model Registry -- pour les expés manuelles de run.py)."""
     cfg = HORIZON_CFG[horizon]
     horizon_steps, timestep, steps_per_day = cfg["horizon_steps"], cfg["timestep"], cfg["steps_per_day"]
     n_splits_eff = 2 if timestep == "1D" else 3
@@ -61,6 +63,32 @@ def run_training(
     outputs_dir = config.ROOT / "outputs" / "hybrid" / dossier / f"h{horizon}"
     weights_dir.mkdir(parents=True, exist_ok=True)
     outputs_dir.mkdir(parents=True, exist_ok=True)
+
+    mlflow_params = {
+        "dossier": dossier,
+        "horizon": horizon,
+        "horizon_steps": horizon_steps,
+        "timestep": timestep,
+        "meta_type": meta_type,
+        "epochs": epochs,
+        "n_trials_lgbm": n_trials_lgbm,
+        "n_trials_final": n_trials_final,
+        "n_splits": n_splits_eff,
+    }
+    with mlflow_tracking.training_run(dossier, horizon, meta_type, mlflow_params) as run_id:
+        return _run_training_body(
+            dossier, horizon, exutoire, meta_type, epochs, n_trials_lgbm, n_trials_final,
+            force_lgbm, force_lstm, weights_dir, outputs_dir, bv_params, transit_amont, cfg,
+            n_splits_eff, run_id, register,
+        )
+
+
+def _run_training_body(
+    dossier, horizon, exutoire, meta_type, epochs, n_trials_lgbm, n_trials_final,
+    force_lgbm, force_lstm, weights_dir, outputs_dir, bv_params, transit_amont, cfg,
+    n_splits_eff, run_id, register,
+) -> dict:
+    horizon_steps, timestep, steps_per_day = cfg["horizon_steps"], cfg["timestep"], cfg["steps_per_day"]
 
     df = load_df(dossier)
     if timestep == "1D":
@@ -125,7 +153,7 @@ def run_training(
         "n_splits": n_splits_eff,
         "q90_train": stacking_result["q90_train"],
         "meteo_feature_cols": meteo_feature_cols,
-        "mlflow_run_id": None,
+        "mlflow_run_id": run_id,
     }
 
     write_artifacts(results, meta_config, yt_v, pl_v, pt_v, stk_v, df_sub, dossier, horizon, weights_dir, outputs_dir)
@@ -136,6 +164,13 @@ def run_training(
         yt_v, pl_v, pt_v, stk_v, valid, y_test[valid], pred_stacking_multi[valid], lstm_idx_test[valid],
         dossier, horizon, weights_dir, outputs_dir,
     )
+
+    mlflow_tracking.log_results(results)
+    mlflow_tracking.log_artifacts(weights_dir, outputs_dir)
+    if register:
+        results["mlflow_model_version"] = mlflow_tracking.register_candidate(
+            dossier, horizon, weights_dir, run_id
+        )
 
     # Doit rester après write_artifacts : _eval_context contient des ndarrays/
     # DataFrames non sérialisables JSON, write_artifacts json.dump(results) plus

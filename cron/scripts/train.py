@@ -46,6 +46,7 @@ from previ_r2d2.model.pipeline.eligibility import (
 )
 from previ_r2d2.model.pipeline.orchestrator import HORIZON_CFG, run_training
 from previ_r2d2.model.pipeline.promotion import evaluate_candidate_vs_production, promote_model
+from previ_r2d2.model.tracking import mlflow_tracking
 
 logger = logging.getLogger("train")
 
@@ -111,6 +112,7 @@ def train_one(
 
     if decision["decision"] in ("promote", "first_training"):
         version = promote_model(dossier, horizon, candidate_dir, results["kge_stacking"])
+        mlflow_tracking.promote_to_production(dossier, horizon, results.get("mlflow_model_version"))
         summary = (
             f"{dossier} h{horizon} : PROMU v{version} "
             f"(kge_candidat={results['kge_stacking']}, kge_prod={decision['production_kge']})"

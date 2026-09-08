@@ -74,6 +74,7 @@ def train_command(args: argparse.Namespace) -> int:
                 meta_type=args.meta, epochs=args.epochs,
                 n_trials_lgbm=args.n_trials_lgbm, n_trials_final=args.n_trials_final,
                 force_lgbm=args.force_lgbm, force_lstm=args.force_lstm,
+                register=False,  # run.py = expés manuelles : run MLflow oui, registry non
             )
         except Exception as exc:
             logger.error("Échec %s h%s : %s", dossier, horizon, exc, exc_info=True)
