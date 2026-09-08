@@ -5,6 +5,7 @@ stages:
     deps:
       - centrales/REFERENCE/config-general.json
       - logs/dvc_markers/bv.json
+      - logs/dvc_markers/validate.json
       - src/previ_r2d2/model/
       - cron/scripts/train.py
       - cron/scripts/build-data-preparation.py
@@ -28,6 +29,7 @@ stages:
     deps:
       - centrales/REFERENCE/config-general.json
       - logs/dvc_markers/bv.json
+      - logs/dvc_markers/validate.json
       - src/previ_r2d2/model/
       - cron/scripts/train.py
       - cron/scripts/build-data-preparation.py

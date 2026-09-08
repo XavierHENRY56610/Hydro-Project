@@ -61,3 +61,17 @@ stages:
     outs:
       - logs/dvc_markers/data_preparation.json:
           cache: false
+
+  validate:
+    wdir: ../..
+    cmd: python cron/scripts/validate-data.py
+    deps:
+      - logs/dvc_markers/data_preparation.json
+      - src/previ_r2d2/preprocessing/data_preparation/validation.py
+    # Contrat de validation de data_preparation.csv -- une erreur bloquante
+    # (code 1) arrête le pipeline avant l'entraînement. always_changed : la
+    # donnée validée est hors DVC (comme data_preparation).
+    always_changed: true
+    outs:
+      - logs/dvc_markers/validate.json:
+          cache: false

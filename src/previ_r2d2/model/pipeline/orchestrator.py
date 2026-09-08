@@ -11,6 +11,7 @@ import pandas as pd
 
 from previ_r2d2.common import config
 from previ_r2d2.model.tracking import mlflow_tracking
+from previ_r2d2.preprocessing.data_preparation.validation import validate_data_preparation
 from previ_r2d2.model.architectures.bilstm.model import BiLSTMHydro
 from previ_r2d2.model.architectures.bilstm.sequences import build_sequences, get_seq_cols
 from previ_r2d2.model.architectures.lightgbm.features import build_features
@@ -53,7 +54,7 @@ def run_training(
 ) -> dict:
     """Orchestre un entraînement complet (une centrale, un horizon) : chargement, OOF, fit final, fit Stacking, évaluation test, artefacts persistés. Loggue tout dans MLflow si activé (`register=False` : run + métriques mais pas d'enregistrement au Model Registry -- pour les expés manuelles de run.py)."""
     cfg = HORIZON_CFG[horizon]
-    horizon_steps, timestep, steps_per_day = cfg["horizon_steps"], cfg["timestep"], cfg["steps_per_day"]
+    horizon_steps, timestep = cfg["horizon_steps"], cfg["timestep"]
     n_splits_eff = 2 if timestep == "1D" else 3
 
     bv_params = bv_params_from_bv_json(bv_json)
@@ -91,6 +92,8 @@ def _run_training_body(
     horizon_steps, timestep, steps_per_day = cfg["horizon_steps"], cfg["timestep"], cfg["steps_per_day"]
 
     df = load_df(dossier)
+    validation = validate_data_preparation(df, strict=True, context=f"{dossier} h{horizon}")
+    mlflow_tracking.log_data_validation(validation)
     if timestep == "1D":
         df = resample_to_daily(df)
     df_train, df_test = split_train_test(df)

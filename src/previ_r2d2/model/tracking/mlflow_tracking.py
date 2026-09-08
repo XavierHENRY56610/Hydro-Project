@@ -111,6 +111,27 @@ def log_results(results: dict) -> None:
         mlflow.log_metrics(metrics)
 
 
+def log_data_validation(result) -> None:
+    """Trace le résultat de la validation data_preparation : tag + warnings en
+    artefact texte. `result` = ValidationResult (peut être n'importe quel objet
+    exposant `.ok` / `.warnings`)."""
+    if not _active():
+        return
+    import json
+    import tempfile
+
+    import mlflow
+
+    mlflow.set_tag("data_validation_ok", str(getattr(result, "ok", True)))
+    warnings = list(getattr(result, "warnings", []) or [])
+    mlflow.set_tag("data_validation_warnings", str(len(warnings)))
+    if warnings:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+            json.dump({"warnings": warnings}, fh, indent=2, ensure_ascii=False)
+            tmp = fh.name
+        mlflow.log_artifact(tmp, artifact_path="data_validation")
+
+
 def log_artifacts(weights_dir: Path, outputs_dir: Path) -> None:
     """Loggue results.json / meta_config.json, les plots et les CSV de sortie."""
     if not _active():
