@@ -38,6 +38,9 @@ prometheus-client>=0.20
 pyjwt>=2.9                # auth Bearer JWT optionnelle (HS256)
 httpx>=0.27              # requis par fastapi.testclient (tests boîte noire)
 
+# Orchestration (phase 05)
+prefect>=3.1,<4
+
 ruff
 pytest
 pytest-cov

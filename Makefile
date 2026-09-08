@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 DC := docker compose
 
-.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api
+.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api prefect flow-run
 
 help: ## liste les cibles
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -18,6 +18,12 @@ mlflow: up ## alias de `up`
 
 api: ## démarre l'API de service (http://localhost:8000/docs) + MLflow
 	$(DC) up -d api
+
+prefect: ## démarre l'orchestration Prefect (UI http://localhost:4200) + worker planifié
+	$(DC) up -d prefect-worker
+
+flow-run: ## déclenche un flow planifié maintenant — make flow-run FLOW=daily-pipeline
+	$(DC) run --rm prefect-worker prefect deployment run "$(FLOW)/$(FLOW)"
 
 down: ## arrête la stack
 	$(DC) down

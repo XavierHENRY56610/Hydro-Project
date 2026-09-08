@@ -163,6 +163,40 @@ services:
       retries: 12
       start_period: 25s
 
+  # --- Phase 05 : orchestration Prefect --------------------------------
+  prefect-server:
+    <<: *common
+    environment:
+      PREFECT_HOME: /data
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      PREFECT_API_URL: http://localhost:4200/api
+    ports:
+      - "4200:4200"
+    volumes:
+      - prefect_data:/data
+    command: ["prefect", "server", "start", "--host", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:4200/api/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  prefect-worker:
+    <<: *common
+    environment:
+      <<: [*app-env, *minio-env]
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-http://mlflow:5000}
+      PREFECT_API_URL: http://prefect-server:4200/api
+      PREFECT_FAILURE_WEBHOOK: ${PREFECT_FAILURE_WEBHOOK:-}
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    command: ["python", "-m", "previ_r2d2.orchestration.serve"]
+
 volumes:
   mlflow_db:
   minio_data:
+  prefect_data:
