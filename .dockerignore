@@ -1,0 +1,16 @@
+# Contexte de build minimal — le code/données sont bind-montés au runtime,
+# le Dockerfile ne COPY que requirements.in / pyproject.toml / README / src.
+.git
+.dvc/cache
+.venv
+__pycache__
+*.pyc
+centrales
+models
+weights
+outputs
+ARCHIVE
+logs
+docs
+.env
+*.log

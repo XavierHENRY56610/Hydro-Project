@@ -36,7 +36,7 @@ def test_compute_debit_autoregressif_features_adds_max_debit_vu_and_lag_columns(
     # base_lags=[8,12,16,24,32], weekly_lags=[168,336] (24*7, 24*14) -- aucune collision
     for lag in [8, 12, 16, 24, 32, 168, 336]:
         assert f"debit_lag_{lag}h" in result.columns
-    assert result[f"debit_lag_8h"].equals(df["debit_m3s"].shift(8))
+    assert result["debit_lag_8h"].equals(df["debit_m3s"].shift(8))
 
 
 def test_compute_debit_autoregressif_features_gradient_accel_and_trend_columns():

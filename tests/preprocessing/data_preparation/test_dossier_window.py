@@ -4,7 +4,6 @@ import json
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from previ_r2d2.common import config
 from previ_r2d2.preprocessing.data_preparation.dossier_window import build_dossier, to_hourly

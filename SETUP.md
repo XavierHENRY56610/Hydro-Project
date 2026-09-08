@@ -9,6 +9,9 @@ en local.
 - **git**.
 - Un compte **DagsHub** avec un token perso (Settings → Tokens sur
   [dagshub.com](https://dagshub.com)).
+- **GNU Make** (optionnel) — absent de Git for Windows par défaut. Sans lui,
+  utiliser directement les commandes `docker compose ...` de la table ci-dessous
+  (ex. `docker compose run --rm test` au lieu de `make test`).
 
 ## Démarrage
 
@@ -27,20 +30,20 @@ docker compose run --rm trainer dvc pull   # données + modèles (config-general
 make test                        # 319 tests -> tous verts
 ```
 
-## Cibles Make
+## Cibles Make (et équivalent `docker compose`)
 
-| Cible | Effet |
-|---|---|
-| `make build` | (re)construit l'image de base |
-| `make up` / `make down` | démarre / arrête la stack |
-| `make shell` | bash interactif dans le conteneur `trainer` |
-| `make test` | suite rapide (`pytest -m "not slow"`) |
-| `make test-slow` | tests d'intégration lents — **crée de vrais commits + tags** |
-| `make pipeline` | `dvc repro dvc/preprocessing/dvc.yaml` |
-| `make train DOSSIER=touzac_g2_G2 H=8` | entraînement ciblé |
-| `make predict` | prédiction + archivage |
-| `make lint` | `ruff` |
-| `make lock` | regénère `infrastructure/docker/requirements.lock` |
+| Cible | `docker compose` équivalent | Effet |
+|---|---|---|
+| `make build` | `docker compose build` | (re)construit l'image de base |
+| `make up` / `make down` | `docker compose up -d` / `down` | démarre / arrête la stack |
+| `make shell` | `docker compose run --rm trainer bash` | bash interactif |
+| `make test` | `docker compose run --rm test` | suite rapide (`pytest -m "not slow"`) |
+| `make test-slow` | `docker compose run --rm test python -m pytest -m slow -v tests/integration/` | tests lents — **crée de vrais commits + tags** |
+| `make pipeline` | `docker compose run --rm trainer dvc repro dvc/preprocessing/dvc.yaml` | pilier preprocessing |
+| `make train DOSSIER=… H=…` | `docker compose run --rm trainer python cron/scripts/train.py --dossier … --horizon … --force` | entraînement ciblé |
+| `make predict` | `docker compose run --rm trainer python cron/scripts/predict-archive.py` | prédiction + archivage |
+| `make lint` | `docker compose run --rm trainer ruff check src tests cron` | `ruff` |
+| `make lock` | (cf. Makefile) | regénère `requirements.lock` hashé |
 
 ## Où sont les choses
 

@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from previ_r2d2.common import config
 from previ_r2d2.model.pipeline.orchestrator import run_training
