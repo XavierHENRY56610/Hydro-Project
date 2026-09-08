@@ -95,31 +95,36 @@ previ-R2-D2/
 
 ## Installation
 
-L'environnement réel est un env conda dédié (`projet-mlops`, Python 3.11,
-créé via conda-forge) — pas un simple `venv` + `pip install -r
-requirements.txt` (`requirements.txt` est un vestige minimal, non à jour).
+**Projet à deux — tout tourne dans Docker.** Aucun Python / conda à installer.
+
+```bash
+cp .env.example .env          # renseigner DAGSHUB_USER + DAGSHUB_TOKEN
+make build                    # construit l'image de base
+make up
+docker compose run --rm trainer dvc pull   # données + modèles des 3 centrales
+make test                     # 319 tests
+```
+
+Détail complet, cibles Make et travail en équipe : **[`SETUP.md`](SETUP.md)**.
+
+<details>
+<summary>Ancienne installation conda locale (fallback hors Docker)</summary>
 
 ```bash
 conda create -n projet-mlops python=3.11 -c conda-forge -y
 conda activate projet-mlops
-
 pip install torch==2.12.1 --index-url https://download.pytorch.org/whl/cpu
-pip install requests pandas "numpy<2.4" scikit-learn scipy pyyaml \
-    lightgbm==4.6.0 optuna==4.6.0 joblib matplotlib shap shapely pyproj \
-    dvc pytest
-pip install -e . --no-deps   # --no-deps : cf. note ci-dessous
-
-dvc pull   # données statiques des 3 centrales (config-general.json,
-           # shapefiles/, centrales/<dossier>/...) depuis le remote DVC local
+pip install -e ".[dev]" --no-deps
+pip install -r infrastructure/docker/requirements.in
+dvc pull
 ```
 
-> **`--no-deps`** : `pyproject.toml` liste aussi `rasterio`/`geopandas`/
-> `pysheds` (délimitation du BV par MNT — jamais utilisée ici, les 3
-> centrales ont toutes un shapefile connu). On les saute volontairement
-> (lourds à installer). `.venv/bin/python` (utilisé par `dvc/*/dvc.yaml` et
-> quelques exemples ci-dessous) est un shim local qui pointe vers cet env —
-> pas indispensable si l'env conda est déjà activé, mais fonctionne alors
-> uniquement depuis un shell qui lit un shebang (Git Bash, pas `cmd.exe`).
+`rasterio`/`geopandas`/`pysheds` (extra `gis`) restent volontairement non
+installés — lazy-import only dans `delineation.py`, jamais exercés (les 3
+centrales ont toutes un shapefile connu). Le shim `.venv/bin/python` n'est
+plus référencé (`dvc/*/dvc.yaml` appelle `python` directement, résolu dans
+le conteneur).
+</details>
 
 ## Travail en équipe (DagsHub)
 

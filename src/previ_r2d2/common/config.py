@@ -1,13 +1,13 @@
 """Configuration centrale du projet.
 
-Les valeurs (URL, jeton) sont lues, par ordre de priorité :
-  1. depuis `secret_config.py` s'il existe (fichier local, NON versionné,
-     à créer à partir de `secret_config.example.py`) ;
-  2. sinon depuis les variables d'environnement ;
-  3. sinon les valeurs par défaut ci-dessous.
+Chemins internes (racine, centrales/, models/, ...) : dérivés de
+l'emplacement de ce fichier, jamais configurables.
 
-Le fichier `secret_config.py` contient les secrets : il est ignoré par git et
-ne doit jamais être commité.
+Secrets / chemins externes (MNT, météo NWP, puissance, DagsHub, MLflow) :
+lus par `Settings` (pydantic-settings), par ordre de priorité :
+  1. `secret_config.py` s'il existe (fichier local, NON versionné) ;
+  2. variables d'environnement / fichier `.env` (injectées par docker-compose) ;
+  3. valeurs par défaut ("" -> dégradation gracieuse).
 """
 
 from __future__ import annotations
@@ -15,62 +15,72 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# Racine du projet (previ-R2-D2/, 3 niveaux au-dessus de ce fichier :
-# src/previ_r2d2/common/config.py -> src/previ_r2d2/ -> src/ -> racine).
-ROOT = Path(__file__).resolve().parents[3]
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Sortie OneGate + bv.json par dossier, et fichiers de référence partagés
-# (config-general.json, bv_rules.json, centrales_calibration.json,
-# shapefiles/, files/) sous centrales/REFERENCE/.
+# --- Chemins internes (non configurables) ---------------------------------
+# Racine du projet : src/previ_r2d2/common/config.py -> src/previ_r2d2/ -> src/ -> racine.
+ROOT = Path(__file__).resolve().parents[3]
 CENTRALES_DIR = ROOT / "centrales"
 REFERENCE_DIR = CENTRALES_DIR / "REFERENCE"
+# Un seul niveau de stockage (plus de NAS distant) : alias de CENTRALES_DIR.
+NAS_DATA_ROOT = CENTRALES_DIR
+# models/<dossier>/h<horizon>/ = modèle en production (versionné DVC + tag git).
+MODELS_DIR = ROOT / "models"
+# Archive locale des prévisions horaires (gitignorée).
+ARCHIVE_ROOT = ROOT / "ARCHIVE"
 
-# Charge le module de secrets local s'il est présent.
+# --- Module de secrets local (optionnel, jamais commité) ------------------
 try:
     from . import secret_config as _secret  # type: ignore
 except ImportError:
     _secret = None
 
 
-def _get(name: str, default: str) -> str:
-    """Valeur de `name` : secret_config.py > variable d'env > défaut."""
+class Settings(BaseSettings):
+    """Secrets et chemins externes. secret_config.py > env / .env > défaut."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False
+    )
+
+    # Chemins externes historiques ("" => dégradation gracieuse).
+    previ_mnt: str = ""
+    previ_nas_meteo: str = ""
+    previ_puissance_source_root: str = ""
+
+    # DagsHub : git + remote DVC (token perso, configuré dans le conteneur).
+    dagshub_user: str = ""
+    dagshub_token: str = ""
+
+    # MLflow (phase 01) — vide en phase 00.
+    mlflow_tracking_uri: str = ""
+
+    def with_secret_overrides(self) -> Settings:
+        """secret_config.py a la priorité absolue (compat historique)."""
+        if _secret is None:
+            return self
+        updates = {
+            field: getattr(_secret, field.upper())
+            for field in type(self).model_fields
+            if hasattr(_secret, field.upper())
+        }
+        return self.model_copy(update=updates) if updates else self
+
+
+settings = Settings().with_secret_overrides()
+
+
+def _get(name: str, default: str = "") -> str:
+    """Compat : valeur d'un réglage par son nom d'env (ex. "PREVI_MNT")."""
+    field = name.lower()
+    if field in type(settings).model_fields:
+        return getattr(settings, field) or default
     if _secret is not None and hasattr(_secret, name):
         return getattr(_secret, name)
     return os.environ.get(name, default)
 
 
-# --- Stockage des débits ---------------------------------------------------
-# Racine de stockage des CSV débit/data_preparation. En production, pointait
-# vers un NAS distinct (previ-R2-D2/centrales/<dossier>/ n'était qu'un
-# symlink dessus, dédup par station_store._index.json) -- injoignable hors
-# serveur. Repointé directement sur CENTRALES_DIR pour ce projet de cours :
-# un seul niveau de stockage, les CSV sont déjà des fichiers réels sous
-# centrales/<dossier>/ (cf. spec simplification 2026-07-23).
-NAS_DATA_ROOT = CENTRALES_DIR
-
-# --- Modèles entraînés (versionnés DVC + tag git) --------------------------
-# models/<dossier>/h<horizon>/ = modèle en production, source de vérité lue
-# par predict_orchestrator. weights/hybrid/<dossier>/h<horizon>/ (inchangé)
-# reste la zone de travail/candidat (run.py, entraînement en cours).
-MODELS_DIR = ROOT / "models"
-
-# --- Archivage horaire des prévisions --------------------------------------
-# Chemin local (remplace l'ancien NAS_DATA_ROOT / "ARCHIVE", injoignable hors
-# serveur) -- gitignoré comme le reste des sorties générées.
-ARCHIVE_ROOT = ROOT / "ARCHIVE"
-
-# Racine hydrospot_stream (source de puissance, déjà utilisée par Previ_v2).
-PUISSANCE_SOURCE_ROOT = Path(_get("PREVI_PUISSANCE_SOURCE_ROOT", ""))
-
-# --- Météo NWP (lecture de fichiers bruts) ---------------------------------
-# Racine où seraient mirorrés les fichiers météo NWP bruts (acquisition FTP
-# retirée -- hors périmètre du projet de cours, cf. nwp_ftp.py supprimé).
-# `nwp_reader.read_points` renvoie un DataFrame vide si ce dossier est
-# absent/vide -- jamais de crash, dégradation gracieuse en attendant le
-# sous-projet "API météo publique".
-NAS_METEO = Path(_get("PREVI_NAS_METEO", ""))
-
-# --- Onboarding BV (délimitation de bassin versant) -----------------------
-# MNT France entière (GeoTIFF, EPSG:4326 ou Lambert93) utilisé pour délimiter
-# les bassins versants amont. Fichier volumineux, jamais versionné.
-PREVI_MNT = Path(_get("PREVI_MNT", ""))
+# --- Chemins externes exposés (Path, comme avant) ------------------------
+PUISSANCE_SOURCE_ROOT = Path(settings.previ_puissance_source_root)
+NAS_METEO = Path(settings.previ_nas_meteo)
+PREVI_MNT = Path(settings.previ_mnt)

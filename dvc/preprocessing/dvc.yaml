@@ -1,7 +1,7 @@
 stages:
   debit:
     wdir: ../..
-    cmd: .venv/bin/python cron/scripts/maj-data.py
+    cmd: python cron/scripts/maj-data.py
     deps:
       - centrales/REFERENCE/config-general.json
       - src/previ_r2d2/preprocessing/debit/
@@ -15,7 +15,7 @@ stages:
 
   onboarding_check:
     wdir: ../..
-    cmd: .venv/bin/python cron/scripts/onboarding-check.py
+    cmd: python cron/scripts/onboarding-check.py
     deps:
       - centrales/REFERENCE/config-general.json
       - logs/dvc_markers/debit.json
@@ -30,7 +30,7 @@ stages:
     # Pas de --mnt ici : DVC ne résout ${...} que via vars:/params:, jamais
     # l'environnement OS. onboarding-bv.py retombe déjà sur $PREVI_MNT via
     # config.PREVI_MNT si --mnt est omis (même pattern que debit).
-    cmd: .venv/bin/python cron/scripts/onboarding-bv.py batch
+    cmd: python cron/scripts/onboarding-bv.py batch
     deps:
       - centrales/REFERENCE/config-general.json
       - centrales/REFERENCE/bv_rules.json
@@ -45,7 +45,7 @@ stages:
 
   data_preparation:
     wdir: ../..
-    cmd: .venv/bin/python cron/scripts/build-data-preparation.py
+    cmd: python cron/scripts/build-data-preparation.py
     deps:
       - logs/dvc_markers/debit.json
       - logs/dvc_markers/bv.json

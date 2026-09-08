@@ -1,0 +1,32 @@
+# Dépendances applicatives de previ-R2-D2 (hors torch : installé séparément
+# depuis l'index CPU dans le Dockerfile). Résolu par pip au build ;
+# `make lock` produit un requirements.lock hashé pour la CI.
+#
+# rasterio / geopandas / pysheds NE sont PAS ici : lazy-import only dans
+# preprocessing/bv/delineation.py, jamais exercés (les 3 centrales ont
+# toutes un shapefile connu). Cf. skill hydro-projet.
+
+requests
+pandas>=2.0
+numpy>=1.26,<2.2
+scikit-learn
+scipy
+pyyaml
+
+lightgbm==4.6.0
+optuna==4.6.0
+joblib
+matplotlib
+shap
+shapely
+pyproj
+
+dvc>=3.5
+dvc-http                # remote DVC DagsHub en https
+
+pydantic>=2.9
+pydantic-settings>=2.6
+
+ruff
+pytest
+pytest-cov
