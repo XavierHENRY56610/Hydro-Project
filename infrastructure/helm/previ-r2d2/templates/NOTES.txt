@@ -1,0 +1,18 @@
+previ-R2-D2 API déployée ({{ .Release.Name }}).
+
+1. Vérifier les pods :
+   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+2. Accès local (Ingress {{ .Values.ingress.className }}) :
+   ajouter à /etc/hosts :  127.0.0.1  {{ .Values.ingress.host }}
+   puis :  curl http://{{ .Values.ingress.host }}/health
+
+   Sans Ingress controller, port-forward :
+   kubectl port-forward svc/{{ include "previ-r2d2.fullname" . }} 8000:{{ .Values.service.port }}
+   curl http://127.0.0.1:8000/health
+
+{{- if .Values.autoscaling.enabled }}
+
+3. HPA actif ({{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }} pods, cible CPU {{ .Values.autoscaling.targetCPUUtilizationPercentage }}%) :
+   kubectl get hpa {{ include "previ-r2d2.fullname" . }}
+{{- end }}

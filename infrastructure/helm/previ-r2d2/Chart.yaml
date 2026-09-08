@@ -1,0 +1,6 @@
+apiVersion: v2
+name: previ-r2d2
+description: API de prévision de débit previ-R2-D2 — Deployment + Service + Ingress (nginx) + HPA
+type: application
+version: 0.1.0
+appVersion: "0.3.0"

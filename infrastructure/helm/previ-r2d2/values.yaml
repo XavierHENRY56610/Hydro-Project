@@ -1,0 +1,73 @@
+# Valeurs par défaut du chart previ-R2-D2 (API de service).
+# Le pipeline / l'entraînement (jobs, Prefect) ne sont PAS déployés ici —
+# cf. docs/mlops/PHASE-07-kubernetes.md pour le périmètre.
+
+image:
+  repository: ghcr.io/xavierhenry56610/previ-r2d2-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+command: ["uvicorn", "previ_r2d2.serving.api:app", "--host", "0.0.0.0", "--port", "8000"]
+containerPort: 8000
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# Chargement du modèle : registry MLflow @production, repli models/ (PVC).
+env:
+  MLFLOW_TRACKING_URI: "http://mlflow:5000"
+  API_MODEL_SOURCE: "auto"
+  API_AUTH_REQUIRED: "false"
+
+# Secret monté en variables d'env (jamais dans les values versionnées).
+# Créer avant `helm install` :
+#   kubectl create secret generic previ-r2d2-secrets \
+#     --from-literal=API_JWT_SECRET=... --from-literal=AWS_ACCESS_KEY_ID=... ...
+existingSecret: previ-r2d2-secrets
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  host: previ-r2d2.local
+  tls:
+    enabled: false
+    secretName: previ-r2d2-tls
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+# Persistance des artefacts modèle téléchargés du registry (cache) + repli
+# models/ si pas de registry. Désactivable si tout vient du registry.
+persistence:
+  enabled: true
+  size: 2Gi
+  mountPath: /app/models
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 20
+  periodSeconds: 15
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 10

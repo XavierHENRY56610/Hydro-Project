@@ -2,7 +2,13 @@
 .DEFAULT_GOAL := help
 DC := docker compose
 
-.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api prefect flow-run monitor fire-alert
+.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api prefect flow-run monitor fire-alert proxy helm-lint helm-template k8s-deploy k8s-delete
+
+# `pwd -W` -> chemin Windows (C:\...) accepté par le montage Docker Desktop ;
+# repli `pwd` sous Linux/macOS.
+HELM_MOUNT := $(shell pwd -W 2>/dev/null || pwd)/infrastructure/helm
+HELM := docker run --rm -v "$(HELM_MOUNT):/apps" --entrypoint helm alpine/helm:3.16.3
+CHART := /apps/previ-r2d2
 
 help: ## liste les cibles
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -30,6 +36,21 @@ monitor: ## démarre Prometheus (:9090) + Grafana (:3000) + exporter métier + n
 
 fire-alert: ## force un KGE effondré + une dérive dans state.json (démo alerting)
 	$(DC) run --rm monitoring-exporter python -m previ_r2d2.monitoring.exporter --fire-alert
+
+proxy: ## reverse-proxy nginx devant l'API (http://localhost:8080) + API + MLflow
+	$(DC) up -d nginx
+
+helm-lint: ## lint du chart Helm de l'API (helm via conteneur)
+	$(HELM) lint $(CHART)
+
+helm-template: ## rend les manifests k8s du chart (revue avant déploiement)
+	$(HELM) template previ $(CHART)
+
+k8s-deploy: ## helm install/upgrade sur le cluster kubectl courant (k3d / Docker Desktop)
+	helm upgrade --install previ ./infrastructure/helm/previ-r2d2 --wait
+
+k8s-delete: ## désinstalle la release
+	helm uninstall previ
 
 down: ## arrête la stack
 	$(DC) down

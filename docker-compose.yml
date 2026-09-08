@@ -33,8 +33,10 @@ x-common: &common
     - ./tests:/app/tests
     - ./dvc:/app/dvc
     - ./config:/app/config
+    - ./infrastructure:/app/infrastructure
     - ./run.py:/app/run.py
     - ./pyproject.toml:/app/pyproject.toml
+    - ./docker-compose.yml:/app/docker-compose.yml
     - ./centrales:/app/centrales
     - ./models:/app/models
     - ./weights:/app/weights
@@ -230,6 +232,21 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+
+  # --- Phase 07 : reverse-proxy (équivalent compose de l'Ingress k8s) ---
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   node-exporter:
     image: prom/node-exporter:v1.8.2
