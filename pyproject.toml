@@ -5,27 +5,34 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "previ_r2d2"
 version = "0.1.0"
-description = "Pipeline IA — reprise automatisée de Previ_v2"
+description = "Pipeline IA — prévision de débit de station hydrométrique"
 requires-python = ">=3.11"
 dependencies = [
     "requests",
-    "pandas",
-    "numpy<2.4",  # pysheds 0.5 (dernière version dispo) utilise np.in1d, supprimé en numpy 2.4
-    "pysheds",
-    "rasterio",
-    "geopandas",
-    "shapely",
-    "pyproj",
+    "pandas>=2.0",
+    "numpy>=1.26,<2.2",
     "scikit-learn",
     "scipy",
     "pyyaml",
+    "shapely",
+    "pyproj",
     "lightgbm==4.6.0",
     "optuna==4.6.0",
-    "torch==2.12.1",  # installé CPU-only : pip install torch==2.12.1 --index-url https://download.pytorch.org/whl/cpu
+    "torch==2.12.1",
     "joblib",
     "matplotlib",
     "shap",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "dvc>=3.5",
+    "dvc-http",
 ]
+
+[project.optional-dependencies]
+# Délimitation de BV par MNT — lazy-import only, jamais exercé pour les 3
+# centrales (toutes ont un shapefile connu). Lourd, installé à la demande.
+gis = ["rasterio", "geopandas", "pysheds", "numpy<2.4"]
+dev = ["ruff", "pytest", "pytest-cov", "pip-tools"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -37,3 +44,17 @@ addopts = ["-m", "not slow"]
 markers = [
     "slow: tests lents (entraînement/prédiction réels, pas de mock) -- exclus par défaut, lancer avec -m slow",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "cron"]
+
+[tool.ruff.lint]
+# Phase 00 : erreurs réelles seulement (E/F). I/UP/B/SIM seront activés lors
+# d'une passe lint dédiée (import order, zip strict=, datetime.UTC, ...).
+select = ["E", "F"]
+ignore = ["E501", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]

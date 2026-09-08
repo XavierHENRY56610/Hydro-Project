@@ -4,8 +4,6 @@ import importlib.util
 import json
 from pathlib import Path
 
-import pandas as pd
-import pytest
 
 _spec = importlib.util.spec_from_file_location(
     "predict_archive_script", Path(__file__).resolve().parents[2] / "cron" / "scripts" / "predict-archive.py"

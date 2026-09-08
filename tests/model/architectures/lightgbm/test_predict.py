@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from previ_r2d2.model.architectures.lightgbm.predict import predict_lgbm_full, predict_lgbm_future
 

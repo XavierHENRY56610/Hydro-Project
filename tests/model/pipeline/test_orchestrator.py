@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from previ_r2d2.model.pipeline.orchestrator import run_training
 from previ_r2d2.preprocessing.data_preparation.data_preparation_csv import write_data_preparation_csv

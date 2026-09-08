@@ -1,0 +1,53 @@
+name: previ-r2d2
+
+# Socle Phase 00 : image commune + service trainer (pipeline/entraînement)
+# + service test. Les services mlflow / api / prefect / monitoring viennent
+# aux phases suivantes, dans ce même fichier.
+
+x-common: &common
+  build:
+    context: .
+    dockerfile: infrastructure/docker/Dockerfile.base
+  image: previ-r2d2-base:latest
+  working_dir: /app
+  environment:
+    PREVI_MNT: ${PREVI_MNT:-}
+    PREVI_NAS_METEO: ${PREVI_NAS_METEO:-}
+    PREVI_PUISSANCE_SOURCE_ROOT: ${PREVI_PUISSANCE_SOURCE_ROOT:-}
+    DAGSHUB_USER: ${DAGSHUB_USER:-}
+    DAGSHUB_TOKEN: ${DAGSHUB_TOKEN:-}
+    MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-}
+    GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-previ-r2d2}
+    GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-previ-r2d2@localhost}
+  volumes:
+    # code + config : bind-montés pour l'édition à chaud
+    - ./src:/app/src
+    - ./cron:/app/cron
+    - ./tests:/app/tests
+    - ./dvc:/app/dvc
+    - ./config:/app/config
+    - ./run.py:/app/run.py
+    - ./pyproject.toml:/app/pyproject.toml
+    # données + modèles : DVC-trackés, partagés via le bind-mount
+    - ./centrales:/app/centrales
+    - ./models:/app/models
+    - ./weights:/app/weights
+    - ./outputs:/app/outputs
+    - ./logs:/app/logs
+    # git + dvc : promotion.py committe/tague dans le dépôt
+    - ./.git:/app/.git
+    - ./.dvc:/app/.dvc
+    - ./.dvcignore:/app/.dvcignore
+
+services:
+  trainer:
+    <<: *common
+    command:
+      - python
+      - -c
+      - "print('previ-r2d2 trainer prêt — docker compose run --rm trainer <commande>')"
+
+  test:
+    <<: *common
+    profiles: ["test"]
+    command: ["python", "-m", "pytest", "-q"]

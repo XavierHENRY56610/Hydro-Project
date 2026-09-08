@@ -1,7 +1,7 @@
 schema: '2.0'
 stages:
   debit:
-    cmd: .venv/bin/python cron/scripts/maj-data.py
+    cmd: python cron/scripts/maj-data.py
     deps:
     - path: centrales/REFERENCE/config-general.json
       hash: md5
@@ -18,7 +18,7 @@ stages:
       md5: 74427d98333533f3b3bfa2a02c53c92e
       size: 42
   bv:
-    cmd: .venv/bin/python cron/scripts/onboarding-bv.py batch
+    cmd: python cron/scripts/onboarding-bv.py batch
     deps:
     - path: centrales/REFERENCE/bv_rules.json
       hash: md5
@@ -56,7 +56,7 @@ stages:
       md5: 618f5a479ec0178f8c072176f0340052
       size: 42
   onboarding_check:
-    cmd: .venv/bin/python cron/scripts/onboarding-check.py
+    cmd: python cron/scripts/onboarding-check.py
     deps:
     - path: centrales/REFERENCE/config-general.json
       hash: md5
@@ -76,7 +76,7 @@ stages:
       md5: a1d54395e827c2f4dc2461dd6aa76b71
       size: 42
   data_preparation:
-    cmd: .venv/bin/python cron/scripts/build-data-preparation.py
+    cmd: python cron/scripts/build-data-preparation.py
     deps:
     - path: centrales/REFERENCE/config-general.json
       hash: md5

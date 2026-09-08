@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from previ_r2d2.model.pipeline.plots import (
     plot_kge_by_step,

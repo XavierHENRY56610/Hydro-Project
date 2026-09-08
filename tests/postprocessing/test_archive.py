@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import pytest
 
 from previ_r2d2.postprocessing.archive import archive_previous_json
 

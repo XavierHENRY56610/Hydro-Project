@@ -1,0 +1,39 @@
+# Image commune previ-R2-D2 : toutes les autres (api, trainer, ...) en héritent.
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# git + dvc : promotion.py fait des `git`/`dvc` en subprocess.
+# libgomp1 : runtime OpenMP requis par LightGBM.
+# build-essential : compilation de wheels natives éventuelle.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        libgomp1 \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# torch CPU-only depuis l'index dédié — gros paquet, layer séparé pour le cache.
+RUN pip install torch==2.12.1 --index-url https://download.pytorch.org/whl/cpu
+
+# Dépendances applicatives. requirements.in est résolu par pip ici ;
+# `make lock` produit un requirements.lock hashé (bascule en phase CI).
+COPY infrastructure/docker/requirements.in ./requirements.in
+RUN pip install -r requirements.in
+
+# Le package lui-même. Le code est bind-monté en dev (docker-compose),
+# mais on l'installe en editable pour que les imports `previ_r2d2` marchent.
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install -e . --no-deps
+
+COPY infrastructure/docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["python", "-m", "pytest", "-q"]

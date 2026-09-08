@@ -1,7 +1,7 @@
 stages:
   predict_archive:
     wdir: ../..
-    cmd: .venv/bin/python cron/scripts/predict-archive.py
+    cmd: python cron/scripts/predict-archive.py
     deps:
       - src/previ_r2d2/model/pipeline/predict_orchestrator.py
       - src/previ_r2d2/postprocessing/archive.py

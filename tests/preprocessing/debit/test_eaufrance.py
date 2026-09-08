@@ -8,7 +8,6 @@ import requests
 from previ_r2d2.preprocessing.debit.eaufrance import (
     RETRY_ATTEMPTS,
     EauFranceClient,
-    EauFranceError,
     series_range,
 )
 

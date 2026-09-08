@@ -4,7 +4,6 @@ import json
 
 import numpy as np
 import pandas as pd
-import pytest
 from sklearn.linear_model import Ridge
 
 from previ_r2d2.model.pipeline.artifacts import build_results, write_artifacts

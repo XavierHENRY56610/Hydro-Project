@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from previ_r2d2.preprocessing.onboarding import validation
 
