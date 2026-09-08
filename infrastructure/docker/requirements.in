@@ -31,6 +31,13 @@ psycopg2-binary          # backend store MLflow sur PostgreSQL
 pydantic>=2.9
 pydantic-settings>=2.6
 
+# API de service (phase 03)
+fastapi>=0.115
+uvicorn[standard]>=0.30
+prometheus-client>=0.20
+pyjwt>=2.9                # auth Bearer JWT optionnelle (HS256)
+httpx>=0.27              # requis par fastapi.testclient (tests boîte noire)
+
 ruff
 pytest
 pytest-cov

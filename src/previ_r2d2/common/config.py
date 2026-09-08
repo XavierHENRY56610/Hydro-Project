@@ -55,6 +55,15 @@ class Settings(BaseSettings):
     # MLflow (phase 01) — vide en phase 00.
     mlflow_tracking_uri: str = ""
 
+    # API de service (phase 03).
+    # api_auth_required=True => tous les endpoints métier exigent un Bearer JWT
+    # signé avec api_jwt_secret (HS256). Vide/False => API ouverte (démo, dev).
+    api_jwt_secret: str = ""
+    api_auth_required: bool = False
+    # models:/previ-r2d2-<dossier>-h<horizon>@production chargé depuis le
+    # registry si dispo ; sinon fallback sur models/<dossier>/h<horizon>/ (DVC).
+    api_model_source: str = "auto"  # auto | registry | local
+
     def with_secret_overrides(self) -> Settings:
         """secret_config.py a la priorité absolue (compat historique)."""
         if _secret is None:

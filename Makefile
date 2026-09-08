@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 DC := docker compose
 
-.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs
+.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api
 
 help: ## liste les cibles
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -15,6 +15,9 @@ up: ## démarre la stack MLflow (UI http://localhost:5000, MinIO http://localhos
 	$(DC) up -d mlflow
 
 mlflow: up ## alias de `up`
+
+api: ## démarre l'API de service (http://localhost:8000/docs) + MLflow
+	$(DC) up -d api
 
 down: ## arrête la stack
 	$(DC) down

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -155,13 +156,19 @@ def load_trained_models(weights_dir, horizon_steps: int, n_features: int):
 
 def run_prediction(
     dossier: str, horizon: int, exutoire: dict, bv_json: dict, now: pd.Timestamp,
-    source: str = "live",
+    source: str = "live", weights_dir: Path | None = None,
 ) -> dict:
-    """Prédit les horizon prochains pas pour une centrale, convertit en débit turbine, écrit un CSV."""
+    """Prédit les horizon prochains pas pour une centrale, convertit en débit turbine, écrit un CSV.
+
+    `weights_dir` : dossier des artefacts du modèle à charger. Par défaut
+    `models/<dossier>/h<horizon>/` (modèle promu, versionné DVC). L'API de
+    service (phase 03) passe ici un dossier téléchargé depuis le Model
+    Registry MLflow (`@production`).
+    """
     cfg = HORIZON_CFG[horizon]
     horizon_steps, timestep, steps_per_day = cfg["horizon_steps"], cfg["timestep"], cfg["steps_per_day"]
 
-    weights_dir = config.MODELS_DIR / dossier / f"h{horizon}"
+    weights_dir = weights_dir or (config.MODELS_DIR / dossier / f"h{horizon}")
     outputs_dir = config.ROOT / "outputs" / "hybrid" / dossier / f"h{horizon}" / "predictions"
     outputs_dir.mkdir(parents=True, exist_ok=True)
 

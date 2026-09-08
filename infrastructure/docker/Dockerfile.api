@@ -1,0 +1,12 @@
+# API de service previ-R2-D2 (phase 03) — hérite de l'image de base
+# (torch CPU, previ_r2d2 installé, fastapi/uvicorn dans requirements.in).
+FROM previ-r2d2-base:latest
+
+# Le code est bind-monté en dev (docker-compose) ; l'image embarque quand
+# même src/ pour un run autonome (k8s, phase 07).
+COPY src ./src
+
+EXPOSE 8000
+
+# entrypoint.sh (hérité) configure git/DVC puis exec la commande.
+CMD ["uvicorn", "previ_r2d2.serving.api:app", "--host", "0.0.0.0", "--port", "8000"]

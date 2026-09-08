@@ -3,6 +3,7 @@ name: previ-r2d2
 # Un service par phase MLOps, dans ce même fichier.
 #  Phase 00 : base + trainer + test
 #  Phase 01 : mlflow + mlflow-db + minio (+ trainer branché dessus)
+#  Phase 03 : api (FastAPI, charge le modèle @production depuis MLflow)
 
 x-app-env: &app-env
   PREVI_MNT: ${PREVI_MNT:-}
@@ -62,6 +63,35 @@ services:
     profiles: ["test"]
     environment: *app-env      # PAS de MLFLOW_TRACKING_URI : tracking no-op en test
     command: ["python", "-m", "pytest", "-q"]
+
+  api:
+    <<: *common
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    image: previ-r2d2-api:latest
+    environment:
+      <<: [*app-env, *minio-env]
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-http://mlflow:5000}
+      API_AUTH_REQUIRED: ${API_AUTH_REQUIRED:-false}
+      API_JWT_SECRET: ${API_JWT_SECRET:-}
+      API_MODEL_SOURCE: ${API_MODEL_SOURCE:-auto}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    command:
+      - uvicorn
+      - previ_r2d2.serving.api:app
+      - --host=0.0.0.0
+      - --port=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
 
   mlflow-db:
     image: postgres:16-alpine
