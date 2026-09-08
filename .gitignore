@@ -25,10 +25,11 @@ venv/
 /data/
 /ARCHIVE/
 
-# Dossier claude (specs/plans internes) — sauf la doc MLOps versionnée
-/docs/
+# Dossier claude (specs/plans internes) — sauf la doc MLOps versionnée.
+# `/docs/*` (contenu) et non `/docs/` (dossier) : sinon la négation
+# `!/docs/mlops/` ne peut pas ré-inclure un enfant d'un dossier exclu.
+/docs/*
 !/docs/mlops/
-!/docs/mlops/**
 
 # Artefacts modèle — squelette versionné, contenu ignoré
 /weights/*
