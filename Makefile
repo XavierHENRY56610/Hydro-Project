@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 DC := docker compose
 
-.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api prefect flow-run monitor fire-alert proxy helm-lint helm-template k8s-deploy k8s-delete
+.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api prefect flow-run monitor fire-alert proxy helm-lint helm-template k8s-deploy k8s-delete demo
 
 # `pwd -W` -> chemin Windows (C:\...) accepté par le montage Docker Desktop ;
 # repli `pwd` sous Linux/macOS.
@@ -51,6 +51,18 @@ k8s-deploy: ## helm install/upgrade sur le cluster kubectl courant (k3d / Docker
 
 k8s-delete: ## désinstalle la release
 	helm uninstall previ
+
+demo: ## bout-en-bout sur centrale synthétique : train -> promotion -> service -> monitoring
+	$(DC) up -d mlflow
+	$(DC) run --rm trainer python cron/scripts/demo.py
+	$(DC) up -d api prometheus grafana monitoring-exporter nginx
+	@echo ""
+	@echo "  API      http://localhost:8080/health   (via nginx)"
+	@echo "  Swagger  http://localhost:8000/docs"
+	@echo "  MLflow   http://localhost:5000"
+	@echo "  Grafana  http://localhost:3000   (admin/admin)"
+	@echo ""
+	@echo "  ensuite :  make fire-alert   puis Prometheus http://localhost:9090/alerts"
 
 down: ## arrête la stack
 	$(DC) down

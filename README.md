@@ -17,9 +17,18 @@
 >   séparé de remplacement par une API météo publique.
 > - **automate** (rsync/SSH, `HAUTE_CHUTE`) — aucune des 3 centrales
 >   gardées n'utilise cette stratégie.
-> - **Mail/digest quotidien** et **MLflow** — hors périmètre (lancement
->   manuel des scripts ; le tracking d'expériences est à refaire proprement
->   comme partie du travail de cours).
+> - **Mail/digest quotidien** — remplacé par une notification webhook
+>   Discord/Slack sur échec de flow Prefect (phase 05).
+> - **MLflow** — retiré puis **reconstruit proprement** dans le cadre du
+>   projet MLOps (phase 01 : tracking + Model Registry).
+>
+> **Couche MLOps ajoutée** (projet de cours, 8 phases) : socle Docker,
+> MLflow + Model Registry, validation des données, API FastAPI, CI/CD
+> GitHub Actions, orchestration Prefect, monitoring Evidently +
+> Prometheus/Grafana, déploiement Kubernetes (Helm) + Nginx.
+> → **[`ARCHITECTURE.md`](ARCHITECTURE.md)** · **[`MLOPS.md`](MLOPS.md)**
+> (brique → cours) · **[`SETUP.md`](SETUP.md)** ·
+> [`docs/mlops/`](docs/mlops/) (une fiche par phase).
 >
 > Reste pleinement fonctionnel : le débit (Hub'Eau/eaufrance, API
 > publique), l'onboarding BV, l'entraînement et la prédiction (mode
@@ -102,7 +111,7 @@ cp .env.example .env          # renseigner DAGSHUB_USER + DAGSHUB_TOKEN
 make build                    # construit l'image de base
 make up
 docker compose run --rm trainer dvc pull   # données + modèles des 3 centrales
-make test                     # 319 tests
+make test                     # ~390 tests
 ```
 
 Détail complet, cibles Make et travail en équipe : **[`SETUP.md`](SETUP.md)**.
@@ -510,11 +519,23 @@ python cron/scripts/train.py --mode monthly                 # 5. réentraînemen
 python cron/scripts/predict-archive.py                      # 6. archive + prédit la nouvelle heure
 ```
 
-## Notifications / MLflow
+## Plateforme MLOps (projet de cours)
 
-Retirés dans cette version (cf. note en tête de fichier) — lancement
-manuel des scripts, pas de digest mail ni de tracking d'expériences pour
-l'instant.
+Le cœur ML ci-dessus est enveloppé d'une couche MLOps en 8 phases (branches
+`feat/mlops-phase-N`, une PR par phase). Tout via `make` + `docker compose` :
+
+| | Commande | UI |
+|---|---|---|
+| Stack MLflow | `make up` | :5000 · MinIO :9001 |
+| API de service | `make api` | :8000/docs |
+| Orchestration Prefect | `make prefect` | :4200 |
+| Monitoring | `make monitor` | Grafana :3000 · Prometheus :9090 |
+| Reverse-proxy | `make proxy` | :8080 |
+| Démo bout-en-bout | `make demo` | — |
+| Chart Helm (API k8s) | `make helm-lint` / `make k8s-deploy` | — |
+
+Détail : **[`ARCHITECTURE.md`](ARCHITECTURE.md)**, **[`MLOPS.md`](MLOPS.md)**,
+[`docs/mlops/`](docs/mlops/).
 
 ## Références
 
