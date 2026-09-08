@@ -1,0 +1,45 @@
+name: Release
+
+# Publie l'image de l'API sur le GitHub Container Registry (GHCR) sur tag v*.
+# Ex. `git tag v1.0.0 && git push --tags` -> ghcr.io/<owner>/previ-r2d2-api:1.0.0
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Variables
+        id: vars
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${owner}/previ-r2d2-api" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # docker build "classique" (builder par défaut, lié au daemon) : le
+      # `FROM previ-r2d2-base:latest` de Dockerfile.api résout l'image locale.
+      - name: Build image de base
+        run: docker build -f infrastructure/docker/Dockerfile.base -t previ-r2d2-base:latest .
+
+      - name: Build & push API
+        run: |
+          IMG='${{ steps.vars.outputs.image }}'
+          docker build -f infrastructure/docker/Dockerfile.api \
+            -t "${IMG}:${{ steps.vars.outputs.version }}" \
+            -t "${IMG}:latest" .
+          docker push "${IMG}:${{ steps.vars.outputs.version }}"
+          docker push "${IMG}:latest"

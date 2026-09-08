@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [import-projet, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Suivi MLflow désactivé en CI (no-op) — aucun serveur disponible.
+      MLFLOW_TRACKING_URI: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            infrastructure/docker/requirements.in
+            pyproject.toml
+
+      - name: Dépendances (torch CPU + requirements.in + package)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.12.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r infrastructure/docker/requirements.in
+          pip install -e . --no-deps
+
+      - name: Ruff
+        run: ruff check src tests cron
+
+      - name: Pytest (-m "not slow")
+        run: pytest -q --cov=previ_r2d2 --cov-report=term-missing --cov-report=xml
+
+      - name: Couverture (résumé)
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          try:
+              rate = float(ET.parse("coverage.xml").getroot().get("line-rate", 0))
+              print(f"### Couverture\n- lignes : **{rate * 100:.1f}%**")
+          except Exception as exc:
+              print(f"### Couverture\n- rapport indisponible : {exc}")
+          PY
+
+  docker-build:
+    # Garde Dockerfile.base valide (requirements.in change souvent) sans
+    # relancer la suite dedans — la suite tourne déjà dans lint-test.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build previ-r2d2-base
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.base
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

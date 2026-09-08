@@ -27,7 +27,8 @@ make build                       # construit l'image de base (~5-10 min la 1re f
 make up                          # démarre la stack
 docker compose run --rm trainer dvc pull   # données + modèles (config-general.json,
                                            # shapefiles/, centrales/<dossier>/..., modèles)
-make test                        # 319 tests -> tous verts
+make test                        # 355 tests -> tous verts
+make api                         # API de service -> http://127.0.0.1:8000/docs
 ```
 
 ## Cibles Make (et équivalent `docker compose`)
@@ -43,7 +44,23 @@ make test                        # 319 tests -> tous verts
 | `make train DOSSIER=… H=…` | `docker compose run --rm trainer python cron/scripts/train.py --dossier … --horizon … --force` | entraînement ciblé |
 | `make predict` | `docker compose run --rm trainer python cron/scripts/predict-archive.py` | prédiction + archivage |
 | `make lint` | `docker compose run --rm trainer ruff check src tests cron` | `ruff` |
+| `make api` | `docker compose up -d api` | API FastAPI (`:8000`, Swagger `/docs`) |
 | `make lock` | (cf. Makefile) | regénère `requirements.lock` hashé |
+
+## Intégration continue
+
+`.github/workflows/ci.yml` tourne sur chaque PR et sur push `import-projet` :
+
+- **`lint-test`** — `ruff` + `pytest -m "not slow"` + couverture (Python 3.11
+  natif, torch CPU, cache pip).
+- **`docker-build`** — reconstruit `Dockerfile.base` (cache GHA) pour garantir
+  que l'image reste buildable quand `requirements.in` change.
+
+`.github/workflows/release.yml` — sur tag `v*` : build + push de l'image API
+vers `ghcr.io/<owner>/previ-r2d2-api:<version>` (+ `:latest`).
+
+> **Protection de branche** (à activer une fois dans les *Settings* GitHub du
+> dépôt) : sur `import-projet`, exiger que le job `lint-test` passe avant merge.
 
 ## Où sont les choses
 

@@ -1,6 +1,7 @@
 # API de service previ-R2-D2 (phase 03) — hérite de l'image de base
 # (torch CPU, previ_r2d2 installé, fastapi/uvicorn dans requirements.in).
-FROM previ-r2d2-base:latest
+ARG BASE_IMAGE=previ-r2d2-base:latest
+FROM ${BASE_IMAGE}
 
 # Le code est bind-monté en dev (docker-compose) ; l'image embarque quand
 # même src/ pour un run autonome (k8s, phase 07).
