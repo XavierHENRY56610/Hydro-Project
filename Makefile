@@ -2,20 +2,25 @@
 .DEFAULT_GOAL := help
 DC := docker compose
 
-.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean
+.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs
 
 help: ## liste les cibles
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 	  awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-build: ## (re)construit l'image de base
+build: ## (re)construit les images
 	$(DC) build
 
-up: ## démarre la stack en arrière-plan
-	$(DC) up -d
+up: ## démarre la stack MLflow (UI http://localhost:5000, MinIO http://localhost:9001)
+	$(DC) up -d mlflow
+
+mlflow: up ## alias de `up`
 
 down: ## arrête la stack
 	$(DC) down
+
+logs: ## suit les logs de la stack
+	$(DC) logs -f
 
 shell: ## bash interactif dans le conteneur trainer
 	$(DC) run --rm trainer bash

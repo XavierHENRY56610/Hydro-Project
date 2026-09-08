@@ -24,6 +24,10 @@ pyproj
 dvc>=3.5
 dvc-http                # remote DVC DagsHub en https
 
+mlflow>=2.16,<3          # tracking + model registry (phase 01)
+boto3                    # artefacts MLflow sur MinIO (S3)
+psycopg2-binary          # backend store MLflow sur PostgreSQL
+
 pydantic>=2.9
 pydantic-settings>=2.6
 
