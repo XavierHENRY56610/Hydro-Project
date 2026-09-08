@@ -111,3 +111,38 @@ def monthly_retrain_flow(push: bool = True) -> None:
     train("monthly")
     if push:
         push_artifacts()
+
+
+@task(task_run_name="monitoring-{dossier}-h{horizon}")
+def monitor_one(dossier: str, horizon: int) -> None:
+    """Dérive (référence = data_preparation.csv figé avec le modèle, courant =
+    7 derniers jours) + KGE en ligne, écrits dans `state.json`."""
+    import pandas as pd
+
+    from previ_r2d2.monitoring import drift, online_perf, state
+    from previ_r2d2.preprocessing.data_preparation.data_preparation_csv import read_data_preparation_csv
+
+    ref_path = config.MODELS_DIR / dossier / f"h{horizon}" / "data_preparation.csv"
+    cur_path = config.CENTRALES_DIR / dossier / "data_preparation.csv"
+    metrics: dict[str, float] = {}
+
+    if ref_path.exists() and cur_path.exists():
+        reference = read_data_preparation_csv(ref_path)
+        current = read_data_preparation_csv(cur_path)
+        cutoff = pd.Timestamp.now().normalize() - pd.Timedelta(days=7)
+        result = drift.run_drift_report(
+            reference, current[current.index >= cutoff],
+            html_path=config.ROOT / "outputs" / "monitoring" / f"drift_{dossier}_h{horizon}.html",
+        )
+        metrics.update(result.as_metrics())
+
+    metrics.update(online_perf.evaluate_online(dossier, horizon).as_metrics())
+    state.update(dossier, horizon, **metrics)
+
+
+@flow(name="weekly-monitoring", on_failure=[notify_failure])
+def weekly_monitoring_flow() -> None:
+    """Hebdo : dérive + perf en ligne pour chaque (dossier, horizon) promu."""
+    for version_path in sorted(config.MODELS_DIR.glob("*/h*/version.json")):
+        horizon_dir = version_path.parent
+        monitor_one(horizon_dir.parent.name, int(horizon_dir.name.removeprefix("h")))

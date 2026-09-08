@@ -196,7 +196,58 @@ services:
         condition: service_healthy
     command: ["python", "-m", "previ_r2d2.orchestration.serve"]
 
+  # --- Phase 06 : monitoring & alerting -------------------------------
+  monitoring-exporter:
+    <<: *common
+    environment: *app-env
+    command: ["python", "-m", "previ_r2d2.monitoring.exporter"]
+    ports:
+      - "9200:9200"
+
+  prometheus:
+    image: prom/prometheus:v2.53.2
+    volumes:
+      - ./infrastructure/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infrastructure/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    # Docker Desktop (WSL2) refuse le bind `/:/host:ro,rslave` : on lit /proc
+    # et /sys du conteneur (= la VM Docker), suffisant pour un dashboard infra.
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    ports:
+      - "9100:9100"
+
 volumes:
   mlflow_db:
   minio_data:
   prefect_data:
+  prometheus_data:
+  grafana_data:

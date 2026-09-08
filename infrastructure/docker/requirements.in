@@ -41,6 +41,10 @@ httpx>=0.27              # requis par fastapi.testclient (tests boîte noire)
 # Orchestration (phase 05)
 prefect>=3.1,<4
 
+# Monitoring (phase 06) — version épinglée sur celle des cours DataScientest.
+# Repli KS via scipy (déjà listé) si l'API Evidently bouge.
+evidently==0.7.11
+
 ruff
 pytest
 pytest-cov

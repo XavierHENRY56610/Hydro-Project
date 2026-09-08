@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 DC := docker compose
 
-.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api prefect flow-run
+.PHONY: help build up down shell test test-slow pipeline train predict lint lock clean mlflow logs api prefect flow-run monitor fire-alert
 
 help: ## liste les cibles
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -24,6 +24,12 @@ prefect: ## démarre l'orchestration Prefect (UI http://localhost:4200) + worker
 
 flow-run: ## déclenche un flow planifié maintenant — make flow-run FLOW=daily-pipeline
 	$(DC) run --rm prefect-worker prefect deployment run "$(FLOW)/$(FLOW)"
+
+monitor: ## démarre Prometheus (:9090) + Grafana (:3000) + exporter métier + node-exporter
+	$(DC) up -d prometheus grafana node-exporter monitoring-exporter
+
+fire-alert: ## force un KGE effondré + une dérive dans state.json (démo alerting)
+	$(DC) run --rm monitoring-exporter python -m previ_r2d2.monitoring.exporter --fire-alert
 
 down: ## arrête la stack
 	$(DC) down

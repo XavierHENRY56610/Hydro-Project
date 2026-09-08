@@ -1,0 +1,50 @@
+groups:
+  - name: previ-r2d2
+    rules:
+      - alert: PreviApiDown
+        expr: up{job="previ-api"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "API previ-R2-D2 injoignable"
+          description: "Le job previ-api est DOWN depuis plus de 2 minutes."
+
+      - alert: PreviExporterDown
+        expr: up{job="previ-exporter"} == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Exporter métier injoignable"
+          description: "Les gauges previ_model_* / previ_data_drift_* ne sont plus scrapées."
+
+      - alert: ModelKgeLow
+        expr: previ_model_kge < 0.5
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "KGE modèle bas ({{ $labels.dossier }} {{ $labels.horizon }})"
+          description: "previ_model_kge = {{ $value | printf \"%.2f\" }} — modèle promu peu performant."
+
+      - alert: OnlineKgeDegraded
+        expr: previ_online_kge < 0.3
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "KGE en ligne dégradé ({{ $labels.dossier }} {{ $labels.horizon }})"
+          description: "previ_online_kge = {{ $value | printf \"%.2f\" }} — réentraînement à envisager."
+
+      - alert: DataDriftDetected
+        expr: previ_data_drift_detected == 1
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Dérive des données ({{ $labels.dossier }} {{ $labels.horizon }})"
+          description: "Le dernier rapport hebdo a détecté une dérive des features d'entrée."
+
+      - alert: ForecastStale
+        expr: previ_hours_since_last_forecast > 2
+        for: 15m
+        labels: {severity: critical}
+        annotations:
+          summary: "Prévision manquante ({{ $labels.dossier }})"
+          description: "Aucune prévision écrite depuis {{ $value | printf \"%.1f\" }} h — flow horaire en panne ?"
